@@ -4,7 +4,7 @@ ARG GCS_PLUGIN_VERSION
 ARG PUSH_PLUGIN_VERSION
 ARG HELM_DIFF_VERSION
 
-FROM golang:latest as setup
+FROM golang:1.20.7-bullseye as setup
 ARG HELM_VERSION
 ARG S3_PLUGIN_VERSION
 ARG GCS_PLUGIN_VERSION
@@ -39,8 +39,8 @@ COPY lib/ lib/
 COPY build_entrypoint_script build_entrypoint_script
 COPY acceptance_tests/ acceptance_tests/
 RUN apt-get update \
-    && apt-get install -y python3-venv \
-    && make acceptance
+    && apt-get install -y python3-venv
+RUN make acceptance
 
 FROM codefresh/kube-helm:${HELM_VERSION}
 
