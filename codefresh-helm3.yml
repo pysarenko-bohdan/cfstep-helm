@@ -61,6 +61,24 @@ steps:
         all:
           recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
 
+  run_e2e:
+    type: codefresh-run
+    stage: run_e2e
+    arguments:
+      FOLLOW_LOGS: false
+      PIPELINE_ID: Helm/e2e
+      DETACH: false
+      # TRIGGER_ID: trigger
+      # BRANCH: ${{CF_BRANCH}}
+      RESET_VOLUME: true
+      # VARIABLE_FILE: ${{CF_VOLUME_PATH}}/env_vars_to_run_pipe.yml
+      VARIABLE:
+        - HELM_VERSION=${{HELM_VERSION}}-${{CF_SHORT_REVISION}}
+    when:
+      condition:
+        all:
+          recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
+
   push:
     type: push
     tag: ${{HELM_VERSION}}
