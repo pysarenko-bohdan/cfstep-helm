@@ -183,12 +183,13 @@ steps:
     name: deleting_release_tomcat
     when:
       steps:
-        - name: auth
-          on:
-            - finished
-        - name: deploy
-          on:
-            - finished
         - name: check_promote_helm
           on:
             - finished
+#        - name: auth
+#          on:
+#            - finished
+#        - name: deploy
+#          on:
+#            - finished
+
