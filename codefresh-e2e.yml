@@ -19,15 +19,15 @@ steps:
       kubectl config use-context ${{KUBE_CONTEXT}}
       NS_EXIST=$(kubectl get ns helm-$HELM_VERSION_STR --ignore-not-found | grep helm)
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
-        kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
+        kubectl delete ns helm-$HELM_VERSION_STR 
       fi
       NS_EXIST=$(kubectl get ns helm-deploy-$HELM_VERSION_STR --ignore-not-found | grep helm)
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
-        kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
+        kubectl delete ns helm-deploy-$HELM_VERSION_STR 
       fi
       NS_EXIST=$(kubectl get ns helm-promo-$HELM_VERSION_STR --ignore-not-found | grep helm)
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
-        kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
+        kubectl delete ns helm-promo-$HELM_VERSION_STR 
       fi
       kubectl create ns helm-$HELM_VERSION_STR
       kubectl create ns helm-deploy-$HELM_VERSION_STR
