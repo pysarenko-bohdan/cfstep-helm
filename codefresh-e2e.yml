@@ -17,7 +17,9 @@ steps:
       export HELM_VERSION_STR=$(echo "${{HELM_VERSION}}" | sed "s/\./-/g")
       cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
       kubectl config use-context ${{KUBE_CONTEXT}}
+      echo "helm"
       NS_EXIST=$(kubectl get ns helm-$HELM_VERSION_STR --ignore-not-found | grep helm)
+      echo "$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
         echo "delete helm..."
         kubectl delete ns helm-$HELM_VERSION_STR 
@@ -25,6 +27,7 @@ steps:
       fi
       echo "helm-deploy"
       NS_EXIST=$(kubectl get ns helm-deploy-$HELM_VERSION_STR --ignore-not-found | grep helm)
+      echo "$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
         echo "delete helm-deploy..."
         kubectl delete ns helm-deploy-$HELM_VERSION_STR
@@ -32,6 +35,7 @@ steps:
       fi
       echo "helm-promo"
       NS_EXIST=$(kubectl get ns helm-promo-$HELM_VERSION_STR --ignore-not-found | grep helm)
+      echo "$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
         echo "delete helm-promo..."
         kubectl delete ns helm-promo-$HELM_VERSION_STR
