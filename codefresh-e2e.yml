@@ -19,7 +19,7 @@ steps:
       kubectl config use-context ${{KUBE_CONTEXT}}
       echo "helm-$HELM_VERSION_STR"
       kubectl get ns
-      NS_EXIST=$(kubectl get ns | grep helm-$HELM_VERSION_STR)
+      NS_EXIST=$(kubectl get ns | grep "helm-$HELM_VERSION_STR")
       echo "fuck-$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
         echo "delete helm..."
