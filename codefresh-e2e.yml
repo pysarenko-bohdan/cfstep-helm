@@ -32,7 +32,6 @@ steps:
       kubectl create ns helm-$HELM_VERSION_STR
       kubectl create ns helm-deploy-$HELM_VERSION_STR
       kubectl create ns helm-promo-$HELM_VERSION_STR
-  name: deleting_release_tomcat
 
 #  auth:
 #    stage: deploy
@@ -162,25 +161,24 @@ steps:
     fail_fast: false
     working_directory: IMAGE_WORK_DIR
     commands:
-      - |
-        kubectl config use-context ${{KUBE_CONTEXT}}
-        echo 'Running: helm delete tomcat'
-        TOMCAT_INSTALLED=$(kubectl get pods -n helm-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
-        if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
-          helm delete tomcat --timeout 300s   --namespace helm-${{HELM_VERSION_NORMALIZED}}
-          kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
-        fi
-        TOMCAT_INSTALLED=$(kubectl get pods -n helm-deploy-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
-        if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
-          helm delete tomcat --timeout 300s   --namespace helm-deploy-${{HELM_VERSION_NORMALIZED}}
-          kubectl delete ns helm-deploy-${{HELM_VERSION_NORMALIZED}} 
-        fi
-        TOMCAT_INSTALLED=$(kubectl get pods -n helm-promo-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
-        if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
-          helm delete tomcat --timeout 300s   --namespace helm-promo-${{HELM_VERSION_NORMALIZED}}
-          kubectl delete ns helm-promo-${{HELM_VERSION_NORMALIZED}} 
-        fi
-    name: deleting_release_tomcat
+    - |
+      kubectl config use-context ${{KUBE_CONTEXT}}
+      echo 'Running: helm delete tomcat'
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
+      fi
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-deploy-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-deploy-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-deploy-${{HELM_VERSION_NORMALIZED}} 
+      fi
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-promo-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-promo-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-promo-${{HELM_VERSION_NORMALIZED}} 
+      fi
     when:
       steps:
         - name: check_promote_helm
