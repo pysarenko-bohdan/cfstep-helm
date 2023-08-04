@@ -17,8 +17,7 @@ steps:
       export HELM_VERSION_STR=$(echo "${{HELM_VERSION}}" | sed "s/\./-/g")
       cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
       kubectl config use-context ${{KUBE_CONTEXT}}
-      echo "helm-$HELM_VERSION_STR"
-      kubectl get ns
+      kubectl get ns | grep "helm-"
       NS_EXIST=$(kubectl get ns | grep "helm-$HELM_VERSION_STR")
       echo "fuck-$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
