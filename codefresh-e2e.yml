@@ -18,8 +18,10 @@ steps:
       cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
       kubectl config use-context ${{KUBE_CONTEXT}}
       echo "helm"
+      kubectl get ns helm-$HELM_VERSION_STR --ignore-not-found
+      kubectl get ns helm-$HELM_VERSION_STR --ignore-not-found | grep helm
       NS_EXIST=$(kubectl get ns helm-$HELM_VERSION_STR --ignore-not-found | grep helm)
-      echo "$NS_EXIST"
+      echo "fuck-$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
         echo "delete helm..."
         kubectl delete ns helm-$HELM_VERSION_STR 
