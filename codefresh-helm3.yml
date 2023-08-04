@@ -1,7 +1,12 @@
 version: '1.0'
+stages:
+  - "init"
+  - "build"
+  - "push"
 
 steps:
   define_the_versions_list:
+    stage: 'init'
     image: alpine
     commands:
       - |-
@@ -14,6 +19,7 @@ steps:
           notRecursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == true'
 
   run-cli-loop:
+    stage: 'init'
     image: codefresh/cli
     commands:
       - for VAR in $(cat helmVersionsList); do codefresh wait $(codefresh run ${{CF_PIPELINE_NAME}} -d --branch ${{CF_BRANCH}} --variable HELM_VERSION=${VAR} --trigger ${{CF_PIPELINE_TRIGGER_ID}} --context github && sleep 10) & done
@@ -24,6 +30,7 @@ steps:
           notRecursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == true'
 
   debug:
+    stage: 'build'
     type: freestyle
     image: alpine
     commands:
@@ -35,6 +42,7 @@ steps:
           recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
 
   clone:
+    stage: 'build'
     type: git-clone
     arguments:
       repo: '${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}'
@@ -46,6 +54,7 @@ steps:
           recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
 
   build_image:
+    stage: 'build'
     type: build
     registry: pysarenko
     working_directory: '${{clone}}'
@@ -61,7 +70,27 @@ steps:
         all:
           recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
 
+  run_e2e:
+    stage: 'build'
+    type: codefresh-run
+    arguments:
+      FOLLOW_LOGS: false
+      PIPELINE_ID: Helm/e2e
+      DETACH: false
+      # TRIGGER_ID: trigger
+      # BRANCH: ${{CF_BRANCH}}
+      RESET_VOLUME: true
+      # VARIABLE_FILE: ${{CF_VOLUME_PATH}}/env_vars_to_run_pipe.yml
+      VARIABLE:
+        - HELM_VERSION=${{HELM_VERSION}}-${{CF_SHORT_REVISION}}
+        - CF_BRANCH=${{CF_BRANCH}}
+    when:
+      condition:
+        all:
+          recursivelyInvoked: 'includes("${{HELM_VERSION}}", "${{") == false'
+
   push:
+    stage: 'push'
     type: push
     tag: ${{HELM_VERSION}}
     candidate: ${{build_image}}

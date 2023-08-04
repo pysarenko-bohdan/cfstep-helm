@@ -1,0 +1,206 @@
+version: "1.0"
+mode: parallel
+stages:
+  - "init"
+  - "deploy"
+  - "clean"
+
+steps:
+  prepare_namespaces:
+    stage: init
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    title: Create namespaces
+    fail_fast: false
+    working_directory: IMAGE_WORK_DIR
+    commands:
+    - |
+      export HELM_VERSION_STR=$(echo "${{HELM_VERSION}}" | sed "s/\./-/g")
+      kubectl config use-context ${{KUBE_CONTEXT}}
+      kubectl get ns | grep "helm-$HELM_VERSION_STR"
+      NS_EXIST=$(kubectl get ns | grep "helm-$HELM_VERSION_STR")
+      echo "fuck-$NS_EXIST"
+      if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
+        echo "delete helm..."
+        kubectl delete ns helm-$HELM_VERSION_STR 
+        echo "deleted helm"
+      fi
+      echo "helm-deploy-$HELM_VERSION_STR"
+      NS_EXIST=$(kubectl get ns helm-deploy-$HELM_VERSION_STR --ignore-not-found | grep helm)
+      echo "$NS_EXIST"
+      if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
+        echo "delete helm-deploy..."
+        kubectl delete ns helm-deploy-$HELM_VERSION_STR
+        echo "deleted helm-deploy"
+      fi
+      echo "helm-promo-$HELM_VERSION_STR"
+      NS_EXIST=$(kubectl get ns helm-promo-$HELM_VERSION_STR --ignore-not-found | grep helm)
+      echo "$NS_EXIST"
+      if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ] 
+        echo "delete helm-promo..."
+        kubectl delete ns helm-promo-$HELM_VERSION_STR
+        echo "deleted helm-promo"
+      fi
+      echo "create helm"
+      kubectl create ns helm-$HELM_VERSION_STR
+      kubectl create ns helm-deploy-$HELM_VERSION_STR
+      kubectl create ns helm-promo-$HELM_VERSION_STR
+      cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
+
+#  auth:
+#    stage: deploy
+#    type: helm
+#    arguments:
+#      action: auth
+#      helm_version: ${{HELM_VERSION}}
+#      kube_context: ${{KUBE_CONTEXT}}
+#      commands:
+#        - helm list
+#    when:
+#      steps:
+#        - name: prepare_namespaces
+#          on:
+#            - finished
+
+#  deploy:
+#    stage: deploy
+#    type: helm
+#    arguments:
+#      action: install
+#      chart_name: tomcat
+#      release_name: tomcat
+#      helm_version: ${{HELM_VERSION}}
+#      kube_context: ${{KUBE_CONTEXT}}
+#      namespace: helm-${{HELM_VERSION_NORMALIZED}}
+#      skip_cf_stable_helm_repo: true
+#      credentials_in_arguments: true
+#      chart_repo_url: 'https://charts.helm.sh/stable'
+#      custom_values:
+#        - 'pat.arr="{one,two,three}"'
+#        - 'STR_WITH_COMAS="one\,two\,three"'
+#        - test_var=test_key
+#    when:
+#      steps:
+#        - name: prepare_namespaces
+#          on:
+#            - finished
+
+  installing_chart:
+    stage: deploy
+    create_file:
+      path: /codefresh/volume/cf-generated
+      name: values.yaml
+      content: |
+        test:
+          helm_test: string
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    title: Installing chart
+    environment:
+      - CHART_NAME=tomcat
+      - RELEASE_NAME=tomcat
+      - KUBE_CONTEXT=${{KUBE_CONTEXT}}
+      - NAMESPACE=helm-deploy-${{HELM_VERSION_NORMALIZED}}
+      - CHART_VERSION=0.4.3
+      - 'CHART_REPO_URL=https://charts.helm.sh/stable'
+      - VALUE_test_var=test_key
+      - VALUESFILE_values=/codefresh/volume/cf-generated/values.yaml
+    name: installing_chart
+    when:
+      steps:
+        - name: prepare_namespaces
+          on:
+            - finished
+
+  check_installing_helm:
+    stage: deploy
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    commands:
+      - env | grep HE
+      - export TOMCAT_INSTALLED=$(kubectl get pods -n helm-deploy-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      - if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] ; then return 1; fi
+      - export TOMCAT_RELEASES=$(kubectl get secret -n helm-deploy-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      - if [ -z "$TOMCAT_RELEASES" ] || [ "$TOMCAT_RELEASES" = "null" ] ; then return 1; fi
+    when:
+      steps:
+        - name: installing_chart
+          on:
+            - success
+
+  promote_chart:
+    stage: deploy
+    create_file:
+      path: /codefresh/volume/cf-generated
+      name: values.yaml
+      content: |
+        test:
+          helm_test: string
+          var: test_key_1
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    title: Promote chart
+    environment:
+      - ACTION=promotion
+      - RELEASE_NAME=tomcat
+      - KUBE_CONTEXT=${{KUBE_CONTEXT}}
+      - NAMESPACE=helm-promo-${{HELM_VERSION_NORMALIZED}}
+      - CHART_NAME=tomcat
+      - CHART_VERSION=0.4.3
+      - >-
+        CHART_JSON_GZIP=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
+      - VALUESFILE_values=/codefresh/volume/cf-generated/values.yaml
+    name: promote_chart
+    when:
+      steps:
+        - name: check_installing_helm
+          on:
+            - success
+
+  check_promote_helm:
+    stage: deploy
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    commands:
+      - export TOMCAT_INSTALLED=$(kubectl get pods -n helm-promo-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      - if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] ; then return 1; fi
+      - export TOMCAT_RELEASES=$(kubectl get secret -n helm-promo-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      - if [ -z "$TOMCAT_RELEASES" ] || [ "$TOMCAT_RELEASES" = "null" ] ; then return 1; fi
+    when:
+      steps:
+        - name: promote_chart
+          on:
+            - success
+
+  deleting_release_tomcat:
+    stage: clean
+    image: '${{STEP_IMAGE}}:${{HELM_VERSION}}'
+    title: Deleting release tomcat
+    fail_fast: false
+    working_directory: IMAGE_WORK_DIR
+    commands:
+    - |
+      kubectl config use-context ${{KUBE_CONTEXT}}
+      echo 'Running: helm delete tomcat'
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-${{HELM_VERSION_NORMALIZED}} 
+      fi
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-deploy-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-deploy-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-deploy-${{HELM_VERSION_NORMALIZED}} 
+      fi
+      TOMCAT_INSTALLED=$(kubectl get pods -n helm-promo-${{HELM_VERSION_NORMALIZED}} --ignore-not-found | grep tomcat)
+      if [ -z "$TOMCAT_INSTALLED" ] || [ "$TOMCAT_INSTALLED" = "null" ] 
+        helm delete tomcat --timeout 300s   --namespace helm-promo-${{HELM_VERSION_NORMALIZED}}
+        kubectl delete ns helm-promo-${{HELM_VERSION_NORMALIZED}} 
+      fi
+    when:
+      steps:
+        - name: check_promote_helm
+          on:
+            - finished
+#        - name: auth
+#          on:
+#            - finished
+#        - name: deploy
+#          on:
+#            - finished
+
