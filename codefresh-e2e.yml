@@ -15,9 +15,8 @@ steps:
     commands:
     - |
       export HELM_VERSION_STR=$(echo "${{HELM_VERSION}}" | sed "s/\./-/g")
-      cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
       kubectl config use-context ${{KUBE_CONTEXT}}
-      kubectl get ns | grep "helm-"
+      kubectl get ns | grep "helm-$HELM_VERSION_STR"
       NS_EXIST=$(kubectl get ns | grep "helm-$HELM_VERSION_STR")
       echo "fuck-$NS_EXIST"
       if [ -z "$NS_EXIST" ] || [ "$NS_EXIST" = "null" ]
@@ -45,6 +44,7 @@ steps:
       kubectl create ns helm-$HELM_VERSION_STR
       kubectl create ns helm-deploy-$HELM_VERSION_STR
       kubectl create ns helm-promo-$HELM_VERSION_STR
+      cf_export HELM_VERSION_NORMALIZED=$HELM_VERSION_STR
 
 #  auth:
 #    stage: deploy
